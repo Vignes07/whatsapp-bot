@@ -14,16 +14,19 @@ app.post('/webhook', (req, res) => {
     const body = req.body;
     console.log('Received webhook:', body);
 
-    // Check if the message is a command
+    // Ensure the webhook contains messages
     if (body.entry && body.entry[0].changes && body.entry[0].changes[0].value.messages) {
         const message = body.entry[0].changes[0].value.messages[0];
         
-        // Check if the message contains the /categories command
-        if (message.text && message.text.toLowerCase() === '/categories') {
-            // If it's the /categories command, call the sendCategories function
-            sendCategories(message.from);
+        // Check if the message contains text
+        if (message.text) {
+            const messageText = message.text.toLowerCase();
+            if (messageText === '/categories') {
+                // If it's the /categories command, call the sendCategories function
+                sendCategories(message.from);
+            }
         }
-        
+
         // Check if it's a reply to an interactive button
         if (message.interactive) {
             const selectedButton = message.interactive.button_reply.id;
