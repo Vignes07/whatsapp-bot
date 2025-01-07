@@ -13,6 +13,8 @@ const PORT = process.env.PORT || 4000;
 app.post('/webhook', (req, res) => {
     const body = req.body;
     console.log('Received webhook:', body);
+    console.log(body.entry[0].changes);
+    
 
     // Ensure the webhook contains messages
     if (body.entry && body.entry[0].changes && body.entry[0].changes[0].value.messages) {
