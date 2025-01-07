@@ -1,5 +1,3 @@
-// server.js
-
 const express = require('express');
 const axios = require('axios');
 const bodyParser = require('body-parser');
@@ -16,9 +14,15 @@ app.post('/webhook', (req, res) => {
     const body = req.body;
     console.log('Received webhook:', body);
 
-    // Check if the message is a button click
+    // Check if the message is a command
     if (body.entry && body.entry[0].changes && body.entry[0].changes[0].value.messages) {
         const message = body.entry[0].changes[0].value.messages[0];
+        
+        // Check if the message contains the /categories command
+        if (message.text && message.text.toLowerCase() === '/categories') {
+            // If it's the /categories command, call the sendCategories function
+            sendCategories(message.from);
+        }
         
         // Check if it's a reply to an interactive button
         if (message.interactive) {
