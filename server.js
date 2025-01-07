@@ -1,76 +1,108 @@
-require('dotenv').config();
-const express = require('express');
-const bodyParser = require('body-parser');
-const { fetchCategories } = require('./src/api');
-const axios = require('axios');
+// server.js
 
+const express = require('express');
+const axios = require('axios');
+const bodyParser = require('body-parser');
 const app = express();
 
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
-const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
-const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
-
+// Use body-parser to parse JSON body
 app.use(bodyParser.json());
 
-// Verify Webhook
-app.get('/webhook', (req, res) => {
-    const mode = req.query['hub.mode'];
-    const token = req.query['hub.verify_token'];
-    const challenge = req.query['hub.challenge'];
+// Set port
+const PORT = process.env.PORT || 4000;
 
-    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-        res.status(200).send(challenge); // Webhook verified
-    } else {
-        res.sendStatus(403); // Forbidden
-    }
-});
+// Webhook endpoint to handle incoming messages
+app.post('/webhook', (req, res) => {
+    const body = req.body;
+    console.log('Received webhook:', body);
 
-// Handle Webhook Events
-app.post('/webhook', async (req, res) => {
-    const { body } = req;
+    // Check if the message is a button click
+    if (body.entry && body.entry[0].changes && body.entry[0].changes[0].value.messages) {
+        const message = body.entry[0].changes[0].value.messages[0];
+        
+        // Check if it's a reply to an interactive button
+        if (message.interactive) {
+            const selectedButton = message.interactive.button_reply.id;
 
-    if (body?.messages) {
-        const message = body.messages[0];
-        const from = message.from; // Sender's phone number
-        const messageBody = message.text?.body;
-
-        if (messageBody === '/categories') {
-            const categories = await fetchCategories();
-            const responseMessage = categories.length
-                ? `Here are the categories:\n- ${categories.join('\n- ')}`
-                : 'Failed to fetch categories. Please try again later.';
-
-            await sendMessage(from, responseMessage);
+            // Handle button click based on the selected category
+            sendMessage(message.from, `You selected category: ${selectedButton}`);
         }
     }
 
-    res.sendStatus(200); // Acknowledge webhook event
+    // Respond with 200 to acknowledge receipt
+    res.sendStatus(200);
 });
 
-// Function to send a WhatsApp message
-const sendMessage = async (to, message) => {
+// Function to send message with categories as individual buttons
+async function sendCategories(to) {
     try {
-        await axios.post(
-            `https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`,
-            {
-                messaging_product: 'whatsapp',
-                to,
-                text: { body: message },
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${ACCESS_TOKEN}`,
-                    'Content-Type': 'application/json',
-                },
-            }
-        );
-    } catch (error) {
-        console.error('Error sending message:', error.message);
-    }
-};
+        // Fetch categories from DummyJSON
+        const response = await axios.get('https://dummyjson.com/products/categories');
+        const categories = response.data;
 
-// Start the server
-const PORT = process.env.PORT || 3000;
+        // Create individual buttons for each category
+        const buttons = categories.map(category => {
+            return {
+                type: 'reply',
+                reply: {
+                    id: category, // ID will be the category name
+                    title: category
+                }
+            };
+        });
+
+        const messageData = {
+            to: to,
+            type: 'interactive',
+            interactive: {
+                type: 'button',
+                body: {
+                    text: 'Here are the available categories:'
+                },
+                action: {
+                    buttons: buttons
+                }
+            }
+        };
+
+        sendMessageToWhatsApp(messageData);
+    } catch (error) {
+        console.error('Error fetching categories from DummyJSON:', error);
+    }
+}
+
+// Function to send a message to WhatsApp using the API
+function sendMessageToWhatsApp(messageData) {
+    const url = `https://graph.facebook.com/v14.0/${process.env.PHONE_NUMBER_ID}/messages`;
+    
+    axios.post(url, messageData, {
+        headers: {
+            'Authorization': `Bearer ${process.env.ACCESS_TOKEN}`,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        console.log('Message sent successfully:', response.data);
+    })
+    .catch(error => {
+        console.error('Error sending message:', error.response.data);
+    });
+}
+
+// Function to send a response back to the user
+function sendMessage(to, message) {
+    const messageData = {
+        to: to,
+        type: 'text',
+        text: {
+            body: message
+        }
+    };
+
+    sendMessageToWhatsApp(messageData);
+}
+
+// Start server
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
