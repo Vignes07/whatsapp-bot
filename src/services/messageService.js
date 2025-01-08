@@ -1,20 +1,53 @@
 const axios = require("axios");
 require("dotenv").config();
 
-const createCategoryMessage = (to, categories) => {
-  // Limit the number of sections to 10
-  const limitedCategories = categories.slice(0, 10);
-
-  const sections = limitedCategories.map((category, index) => ({
-    title: `Category ${index + 1}`, // Ensure this is a valid string
-    rows: [
-      {
-        id: category.slug, // Use the slug as the row ID
-        title: category.name, // Use the name as the row title
-        description: `Browse products in the ${category.name} category.`,
+const createWelcomeMessage = (to, customerName) => {
+  return {
+    messaging_product: "whatsapp",
+    to: to,
+    type: "template",
+    template: {
+      name: "madura_welcome",
+      language: {
+        code: "en",
       },
-    ],
-  }));
+      components: [
+        {
+          type: "header",
+          parameters: [
+            {
+              type: "image",
+              image: {
+                id: "1821115531963896",
+              },
+            },
+          ],
+        },
+        {
+          type: "body",
+          parameters: [
+            {
+              type: "text",
+              parameter_name: "customer_name",
+              text: customerName,
+            },
+          ],
+        },
+      ],
+    },
+  };
+};
+
+const createCategoryMessage = (to, categories) => {
+  const sections = [
+    {
+      title: " ",
+      rows: categories.map((category) => ({
+        id: category.id,
+        title: category.name,
+      })),
+    },
+  ];
 
   return {
     messaging_product: "whatsapp",
@@ -31,7 +64,7 @@ const createCategoryMessage = (to, categories) => {
         text: "Choose a category from the list below:",
       },
       footer: {
-        text: "Powered by WhatsApp Bot",
+        text: "Madura Travel Services",
       },
       action: {
         button: "Select Category",
@@ -63,4 +96,8 @@ function sendMessageToWhatsApp(messageData) {
     });
 }
 
-module.exports = { createCategoryMessage, sendMessageToWhatsApp };
+module.exports = {
+  createWelcomeMessage,
+  createCategoryMessage,
+  sendMessageToWhatsApp,
+};
