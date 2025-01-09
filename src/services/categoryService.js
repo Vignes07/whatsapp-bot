@@ -1,16 +1,11 @@
 const axios = require("axios");
 const messageService = require("./messageService");
-const https = require("https");
 
 require("dotenv").config();
 
 async function fetchCategories() {
   const username = process.env.Consumer_Key;
   const password = process.env.Consumer_Secret;
-
-  const agent = new https.Agent({
-    rejectUnauthorized: false,
-  });
 
   const auth = Buffer.from(username + ":" + password).toString("base64");
 
@@ -20,7 +15,6 @@ async function fetchCategories() {
       {
         headers: {
           Authorization: `Basic ${auth}`,
-          httpsAgent: agent,
         },
       }
     );
