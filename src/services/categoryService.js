@@ -1,5 +1,6 @@
 const axios = require("axios");
 const messageService = require("./messageService");
+const https = require("https");
 
 require("dotenv").config();
 
@@ -7,15 +8,19 @@ async function fetchCategories() {
   const username = process.env.Consumer_Key;
   const password = process.env.Consumer_Secret;
 
-  const auth =
-    "Basic " + Buffer.from(username + ":" + password).toString("base64");
+  const agent = new https.Agent({
+    rejectUnauthorized: false,
+  });
+
+  const auth = Buffer.from(username + ":" + password).toString("base64");
 
   try {
     const response = await axios.get(
       "https://maduratravel.com/api-call/wc/v3/products/categories",
       {
         headers: {
-          Authorization: auth,
+          Authorization: `Basic ${auth}`,
+          httpsAgent: agent,
         },
       }
     );
