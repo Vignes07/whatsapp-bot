@@ -1,17 +1,17 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const webhookController = require("./controllers/webhookController");
+import express from "express";
+import dotenv from "dotenv";
+import bodyParser from "body-parser";
+import webhookRoutes from "./routes/webhook.js";
 
-require("dotenv").config();
+dotenv.config();
 
 const app = express();
 
-// Middleware to parse incoming JSON requests
+// Middleware
 app.use(bodyParser.json());
 
 // Routes
-app.get("/webhook", webhookController.verifyWebhook);
-app.post("/webhook", webhookController.handleIncomingMessage);
+app.use("/webhook", webhookRoutes);
 
 // Start the server
 const PORT = process.env.PORT || 4000;

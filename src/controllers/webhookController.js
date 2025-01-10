@@ -1,53 +1,65 @@
-const categoryService = require("../services/categoryService");
-const messageService = require("../services/messageService");
-const welcomeService = require("../services/welcomeService");
+import { sendWelcomeMsg } from "../services/welcomeService.js";
+import { sendCategories } from "../services/categoryService.js";
+import { sendFeaturedProducts } from "../services/featureService.js";
+import { sendMessageToWhatsApp } from "../services/messageService.js";
 
-require("dotenv").config();
-
-async function verifyWebhook(req, res) {
-  const queryParams = req.query;
+// Webhook verification
+export const verifyWebhook = (req, res) => {
   const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+  const {
+    "hub.mode": mode,
+    "hub.verify_token": token,
+    "hub.challenge": challenge,
+  } = req.query;
 
-  if (
-    queryParams["hub.mode"] === "subscribe" &&
-    queryParams["hub.challenge"] &&
-    queryParams["hub.verify_token"] === VERIFY_TOKEN
-  ) {
-    res.status(200).send(queryParams["hub.challenge"]);
+  if (mode === "subscribe" && token === VERIFY_TOKEN) {
+    res.status(200).send(challenge);
   } else {
     res.status(403).send("Forbidden");
   }
-}
+};
 
-async function handleIncomingMessage(req, res) {
-  const body = req.body;
+// Handle incoming messages from WhatsApp
+export const handleIncomingMessage = async (req, res) => {
+  const { entry } = req.body;
 
-  if (
-    body.entry &&
-    body.entry[0].changes &&
-    body.entry[0].changes[0].value.messages
-  ) {
-    const message = body.entry[0].changes[0].value.messages[0];
+  if (entry && entry[0]?.changes[0]?.value?.messages) {
+    const message = entry[0].changes[0].value.messages[0];
+    const from = message.from;
+    const name = entry[0].changes[0].value.contacts[0].profile.name;
 
-    const name = body.entry[0].changes[0].value.contacts[0].profile.name;
-
-    // Handle text messages (like "hi" or "hello")
+    // Handle text messages
     if (message.text) {
-      const messageText = message.text.body.toLowerCase();
-      if (messageText === "hi" || messageText === "hello") {
-        welcomeService.sendWelcomeMsg(message.from, name);
-      }
-      if (messageText === "/categories") {
-        categoryService.sendCategories(message.from);
+      const text = message.text.body.toLowerCase();
+
+      if (text === "hi" || text === "hello") {
+        // Send welcome message
+        await sendWelcomeMsg(from, name);
+
+        try {
+          // Send featured products after welcome message
+          await sendFeaturedProducts(from);
+
+          // Send categories prompt
+          const categoryMessageData = {
+            messaging_product: "whatsapp",
+            to: from,
+            type: "text",
+            text: {
+              body: "If you'd like to see available tour packages, type /categories",
+            },
+          };
+
+          await sendMessageToWhatsApp(categoryMessageData);
+        } catch (error) {
+          console.error("Error sending featured products:", error);
+        }
+      } else if (text === "/categories") {
+        // Send categories list
+        await sendCategories(from);
       }
     }
 
-    if (message.interactive) {
-      console.log("Interactive message:", message.interactive.list_reply.id);
-    }
+    res.sendStatus(200); // Acknowledge the request
   }
-
-  res.sendStatus(200);
-}
-
-module.exports = { verifyWebhook, handleIncomingMessage };
+};

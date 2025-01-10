@@ -1,13 +1,15 @@
-const axios = require("axios");
-const messageService = require("./messageService");
+import {
+  createWelcomeMessage,
+  sendMessageToWhatsApp,
+} from "./messageService.js";
 
 async function sendWelcomeMsg(to, name) {
   try {
-    const messageData = messageService.createWelcomeMessage(to, name);
-    messageService.sendMessageToWhatsApp(messageData);
+    const messageData = createWelcomeMessage(to, name);
+    await sendMessageToWhatsApp(messageData);
   } catch (error) {
-    console.error("Error Sending message", error);
+    console.error("Error Sending welcome message:", error);
   }
 }
 
-module.exports = { sendWelcomeMsg };
+export { sendWelcomeMsg };

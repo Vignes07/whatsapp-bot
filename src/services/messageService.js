@@ -1,8 +1,9 @@
-const axios = require("axios");
-require("dotenv").config();
+import axios from "axios";
 
-const createWelcomeMessage = (to, customerName) => {
+// Function to create a welcome message using a WhatsApp template
+export const createWelcomeMessage = (to, customerName) => {
   return {
+    messaging_product: "whatsapp",
     messaging_product: "whatsapp",
     to: to,
     type: "template",
@@ -38,16 +39,38 @@ const createWelcomeMessage = (to, customerName) => {
   };
 };
 
-const createCategoryMessage = (to, categories) => {
-  const sections = [
-    {
-      title: " ",
-      rows: categories.map((category) => ({
-        id: category.id,
-        title: category.name,
-      })),
-    },
-  ];
+const truncateText = (text, limit) => {
+  if (text.length > limit) {
+    return text.substring(0, limit) + "..."; // Truncate and add ellipsis
+  }
+  return text; // Return the text as is if it's within the limit
+};
+
+// Function to create an interactive message (list type)
+export const createInteractiveMessage = (
+  to,
+  items,
+  title,
+  bodyText,
+  buttonLabel,
+  footerText
+) => {
+  const MAX_ROWS = 10;
+
+  const section = {
+    title: " ",
+    rows: items.slice(0, MAX_ROWS).map((item) => {
+      const truncatedTitle = truncateText(item.name, 20);
+
+      const truncatedDescription = truncateText(item.description, 69);
+
+      return {
+        id: item.id,
+        title: truncatedTitle,
+        description: truncatedDescription,
+      };
+    }),
+  };
 
   return {
     messaging_product: "whatsapp",
@@ -58,46 +81,33 @@ const createCategoryMessage = (to, categories) => {
       type: "list",
       header: {
         type: "text",
-        text: "Select a category to explore our products.",
+        text: title, // Title for the message
       },
-      body: {
-        text: "Choose a category from the list below:",
-      },
-      footer: {
-        text: "Madura Travel Services",
-      },
+      body: { text: bodyText }, // Body text for the message
+      footer: { text: footerText }, // Footer text for the message
       action: {
-        button: "Select Category",
-        sections: sections,
+        button: buttonLabel, // Label for the button
+        sections: [section], // The section that contains rows
       },
     },
   };
 };
 
-function sendMessageToWhatsApp(messageData) {
+export const sendMessageToWhatsApp = async (messageData) => {
   const url = `https://graph.facebook.com/v21.0/${process.env.PHONE_NUMBER_ID}/messages`;
 
-  axios
-    .post(url, messageData, {
+  try {
+    const response = await axios.post(url, messageData, {
       headers: {
         Authorization: `Bearer ${process.env.ACCESS_TOKEN}`,
         "Content-Type": "application/json",
       },
-    })
-    .then((response) => {
-      console.log("Message sent successfully:", response.data);
-    })
-    .catch((error) => {
-      if (error.response) {
-        console.error("Error sending message:", error.response.data);
-      } else {
-        console.error("Error sending message:", error.message);
-      }
     });
-}
-
-module.exports = {
-  createWelcomeMessage,
-  createCategoryMessage,
-  sendMessageToWhatsApp,
+    console.log("Message sent successfully:", response.data);
+  } catch (error) {
+    console.error(
+      "Error sending message:",
+      error.response ? error.response.data : error.message
+    );
+  }
 };

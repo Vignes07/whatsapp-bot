@@ -1,39 +1,34 @@
-const axios = require("axios");
-const messageService = require("./messageService");
+import {
+  createInteractiveMessage,
+  sendMessageToWhatsApp,
+} from "./messageService.js";
+import apiClient from "./apiClient.js";
 
-require("dotenv").config();
-
-async function fetchCategories() {
-  const username = process.env.Consumer_Key;
-  const password = process.env.Consumer_Secret;
-
-  const auth = Buffer.from(username + ":" + password).toString("base64");
-
+// Fetch categories from the external API
+export const fetchCategories = async () => {
   try {
-    const response = await axios.get(
-      "https://maduratravel.com/api-call/wc/v3/products/categories",
-      {
-        headers: {
-          Authorization: `Basic ${auth}`,
-        },
-      }
-    );
-
+    const response = await apiClient.get("/products/categories");
     return response.data;
   } catch (error) {
     console.error("Error fetching categories:", error);
     throw error;
   }
-}
+};
 
-async function sendCategories(to) {
+// Send categories as an interactive message
+export const sendCategories = async (to) => {
   try {
-    const categories = await fetchCategories();
-    const messageData = messageService.createCategoryMessage(to, categories);
-    messageService.sendMessageToWhatsApp(messageData);
+    const categories = await fetchCategories(); // Fetch categories from the API
+    const messageData = createInteractiveMessage(
+      to,
+      categories,
+      "Explore our tour types!",
+      "Choose a type from the list below:",
+      "Select Tour Type 🧳",
+      "Madura Travel Services"
+    );
+    await sendMessageToWhatsApp(messageData); // Send the message
   } catch (error) {
-    console.error("Error fetching categories:", error);
+    console.error("Error sending categories:", error);
   }
-}
-
-module.exports = { fetchCategories, sendCategories };
+};
